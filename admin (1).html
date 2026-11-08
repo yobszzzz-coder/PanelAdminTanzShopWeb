@@ -1,0 +1,478 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Panel Admin - TanzShop</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
+        body { background: #00478f; min-height: 100vh; }
+        .container { max-width: 700px; margin: 0 auto; padding: 20px; }
+        h1 { font-size: 22px; font-weight: 700; color: #f8fafc; margin-bottom: 24px; text-align: center; }
+        h2 { font-size: 16px; font-weight: 600; color: #f8fafc; margin: 30px 0 14px 0; }
+        
+        /* Auth */
+        .auth-box { background: white; padding: 30px; border-radius: 16px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); text-align: center; margin-top: 100px; }
+        .auth-box input { width: 100%; padding: 12px; margin: 8px 0; border: 1px solid #ddd; border-radius: 8px; font-size: 14px; }
+        .btn { padding: 10px 20px; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; font-size: 14px; }
+        .btn-primary { background: #3b82f6; color: white; }
+        .btn-success { background: #22c55e; color: white; }
+        .btn-danger { background: #ef4444; color: white; }
+        .btn-warning { background: #facc15; color: #111; }
+        button:disabled { opacity: 0.5; cursor: not-allowed; }
+        
+        /* Form */
+        .form-card { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 2px 6px rgba(0,0,0,0.05); margin-bottom: 20px; }
+        select, input, textarea { width: 100%; padding: 10px; margin: 6px 0 12px 0; border: 1px solid #ddd; border-radius: 6px; font-size: 14px; }
+        label { font-size: 13px; font-weight: 600; color: #4b5563; }
+        
+        /* Tabs */
+        .tabs { display: flex; gap: 8px; margin-bottom: 20px; flex-wrap: wrap; }
+        .tab { padding: 10px 18px; background: #e5e7eb; border-radius: 8px; cursor: pointer; font-size: 14px; font-weight: 500; }
+        .tab.active { background: #3b82f6; color: white; }
+        
+        /* List */
+        .item-card { background: white; padding: 16px; border-radius: 10px; margin-bottom: 12px; border-left: 4px solid #3b82f6; }
+        .item-card h4 { font-size: 15px; font-weight: 600; color: #111; }
+        .item-card p { font-size: 13px; color: #6b7280; margin-top: 4px; }
+        .item-actions { margin-top: 10px; display: flex; gap: 8px; flex-wrap: wrap; }
+        .order-proof { max-width: 120px; border-radius: 6px; margin-top: 8px; }
+        .status-pending { color: #d97706; font-weight: 600; }
+        .status-confirmed { color: #16a34a; font-weight: 600; }
+        .status-rejected { color: #ef4444; font-weight: 600; }
+        .hidden { display: none !important; }
+
+.transaksi-item {
+    background: #ffffff;
+    border: 1px solid #e6f2ff;
+    border-radius: 12px;
+    padding: 16px;
+    margin: 12px 16px;
+}
+
+.transaksi-label {
+    font-size: 13px;
+    color: #64748b;
+    margin-bottom: 4px;
+}
+
+.transaksi-value {
+    font-size: 15px;
+    color: #1e293b;
+    font-weight: 500;
+    margin-bottom: 12px;
+}
+
+.transaksi-bukti-img {
+    max-width: 120px;
+    border-radius: 8px;
+    cursor: pointer;
+    border: 1px solid #cce5ff;
+    transition: transform 0.2s;
+}
+
+.transaksi-bukti-img:hover {
+    transform: scale(1.05);
+}
+
+.transaksi-waktu {
+    font-size: 12px;
+    color: #94a3b8;
+    margin-top: 8px;
+}
+
+/* Modal lihat foto full */
+.img-modal {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0,0,0,0.85);
+    z-index: 99999;
+    align-items: center;
+    justify-content: center;
+}
+
+.img-modal.show {
+    display: flex;
+}
+
+.img-modal img {
+    max-width: 90%;
+    max-height: 80vh;
+    border-radius: 8px;
+}
+
+.img-modal-close {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    color: white;
+    font-size: 28px;
+    cursor: pointer;
+}
+
+.empty-state {
+    text-align: center;
+    color: #94a3b8;
+    padding: 40px 20px;
+}
+
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <!-- Login -->
+    <div id="auth-section" class="auth-box">
+        <h2 style="margin-top: 0;">🔐 Login Admin</h2>
+        <input type="text" id="admin-username" placeholder="Username" required>
+        <input type="password" id="admin-pass" placeholder="Password" required>
+        <button class="btn btn-primary" onclick="adminLogin()">Login</button>
+        <p id="auth-error" style="color: red; margin-top: 10px; display: none;"></p>
+    </div>
+
+    <!-- Panel Utama -->
+    <div id="admin-panel" class="hidden">
+        <h1>🎛️ Panel Admin TanzShop</h1>
+        <button class="btn" style="float: right; background: #e5e7eb;" onclick="adminLogout()">Keluar</button>
+        <div style="clear: both;"></div>
+        
+        <!-- Menu Tab -->
+        <div class="tabs">
+            <div class="tab active" onclick="switchTab('produk')">
+                <i class="fa-solid fa-box"></i> Tambah/Hapus Produk
+            </div>
+            <div class="tab" onclick="switchTab('transaksi')">
+                <i class="fa-solid fa-money-bill-wave"></i> Transaksi User
+            </div>
+        </div>
+
+        <!-- === MENU: TAMBAH/HAPUS PRODUK === -->
+        <div id="tab-produk">
+            <h2>➕ Tambah Produk Baru</h2>
+            <div class="form-card">
+                <label>Kategori</label>
+                <select id="prod-category">
+                    <option value="produk-digital"> Produk Digital</option>
+                    <option value="logo">Logo</option>
+                    <option value="suntik-sosmed">Suntik Sosmed</option>
+                    <option value="apk-scammer">Apk Scammer</option>
+                    <option value="nokos">Nokos</option>
+                </select>
+                
+                <label>Nama Produk</label>
+                <input type="text" id="prod-name" placeholder="Contoh: File WA Badak">
+                
+                <label>Deskripsi Produk</label>
+                <textarea id="prod-desc" rows="4" placeholder="Deskripsi lengkap produk..."></textarea>
+                
+                <label>Harga (tanpa Rp dan titik)</label>
+                <input type="text" id="prod-price" placeholder="Contoh: 15000">
+                
+                <label>Foto Produk</label>
+                <input type="file" id="prod-image" accept="image/*">
+                <button class="btn btn-primary" style="margin-top: 10px;" onclick="tambahProduk()">Simpan Produk</button>
+            </div>
+
+            <h2>📦 Daftar Produk</h2>
+            <div id="daftar-produk"></div>
+        </div>
+
+<!-- Daftar Transaksi Pembelian -->
+<div id="transaksi-section" style="display: none;">
+    <h3 style="margin: 20px 16px 12px; font-size: 16px; color: #f8fafc;">📋 Daftar Transaksi Pembelian</h3>
+    <div id="transaksi-list">
+        <div class="empty-state">
+            <p>Belum ada transaksi masuk</p>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Lihat Foto Full -->
+<div id="img-modal" class="img-modal" onclick="closeImgModal()">
+    <span class="img-modal-close">&times;</span>
+    <img id="img-modal-src" src="" alt="Bukti Transfer">
+</div>
+
+    </div>
+</div>
+
+<script>
+// ================= KONFIGURASI =================
+    const SUPABASE_URL = "https://xgyotusufomqkugayxok.supabase.co";
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhneW90dXN1Zm9tcWt1Z2F5eG9rIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTM4MTc0MjcsImV4cCI6MjEwOTM5MzQyN30.MFdTicnvGbANszdqbxzkiZZV6Ok0qbo02VJrf75P2ao";
+
+const ADMIN_USERNAME = "admin";     // Ganti username kamu
+const ADMIN_PASSWORD = "tanzshop123"; // Ganti password kamu
+// =================================================
+
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+// === LOGIN ===
+function adminLogin() {
+    const username = document.getElementById('admin-username').value.trim();
+    const pass = document.getElementById('admin-pass').value;
+    
+    if (!username || !pass) {
+        document.getElementById('auth-error').textContent = 'Isi semua kolom!';
+        document.getElementById('auth-error').style.display = 'block';
+        return;
+    }
+    
+    if (username === ADMIN_USERNAME && pass === ADMIN_PASSWORD) {
+        document.getElementById('auth-section').classList.add('hidden');
+        document.getElementById('admin-panel').classList.remove('hidden');
+        localStorage.setItem('adminLoggedIn', 'true');
+        muatProduk();
+        muatTransaksi();
+    } else {
+        document.getElementById('auth-error').textContent = 'Username atau Password salah!';
+        document.getElementById('auth-error').style.display = 'block';
+    }
+}
+
+function adminLogout() {
+    localStorage.removeItem('adminLoggedIn');
+    document.getElementById('auth-section').classList.remove('hidden');
+    document.getElementById('admin-panel').classList.add('hidden');
+    document.getElementById('admin-username').value = '';
+    document.getElementById('admin-pass').value = '';
+}
+
+// === GANTI MENU ===
+function switchTab(menu) {
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    event.currentTarget.classList.add('active');
+
+    if (menu === 'produk') {
+        document.getElementById('tab-produk').classList.remove('hidden');
+        document.getElementById('transaksi-section').style.display = 'none';
+        muatProduk();
+    } else {
+        document.getElementById('tab-produk').classList.add('hidden');
+        document.getElementById('transaksi-section').style.display = 'block';
+        muatTransaksi();
+    }
+}
+
+
+// === PRODUK: TAMBAH ===
+async function tambahProduk() {
+    const category = document.getElementById('prod-category').value;
+    const name = document.getElementById('prod-name').value.trim();
+    const description = document.getElementById('prod-desc').value.trim();
+    const price = document.getElementById('prod-price').value.trim();
+    const imageInput = document.getElementById('prod-image');
+    
+    if (!name || !description || !price || !imageInput.files[0]) {
+        alert('Lengkapi semua data!');
+        return;
+    }
+    
+    const file = imageInput.files[0];
+    const fileExt = file.name.split('.').pop();
+    const fileName = `${category}-${Date.now()}.${fileExt}`;
+    
+    const { error: uploadError } = await sb.storage
+        .from('product_images')
+        .upload(fileName, file);
+    
+    if (uploadError) { alert('Upload gagal: ' + uploadError.message); return; }
+    
+    const { data: { publicUrl } } = sb.storage.from('product_images').getPublicUrl(fileName);
+    
+    const { error: insertError } = await sb
+        .from('products')
+        .insert({
+            category,
+            name,
+            description,
+            price,
+            image_url: publicUrl
+        });
+    
+    if (insertError) { alert('Gagal menyimpan produk: ' + insertError.message); return; }
+    
+    alert('✅ Produk berhasil ditambahkan!');
+    document.getElementById('prod-name').value = '';
+    document.getElementById('prod-desc').value = '';
+    document.getElementById('prod-price').value = '';
+    document.getElementById('prod-image').value = '';
+    muatProduk();
+}
+
+// === PRODUK: MUAT DAFTAR ===
+async function muatProduk() {
+    const { data, error } = await sb
+        .from('products')
+        .select('*')
+        .order('id', { ascending: true });
+    
+    const container = document.getElementById('daftar-produk');
+    if (error || !data || data.length === 0) {
+        container.innerHTML = '<p style="color: #888; text-align: center; padding: 20px;">Belum ada produk</p>';
+        return;
+    }
+    
+    container.innerHTML = data.map(p => `
+        <div class="item-card">
+            <h4>${p.name}</h4>
+            <p>Kategori: ${p.category.replace('-', ' ').toUpperCase()}</p>
+            <p>Harga: Rp${p.price}</p>
+            <div class="item-actions">
+                <button class="btn btn-danger" onclick="hapusProduk(${p.id})">Hapus Produk</button>
+            </div>
+        </div>
+    `).join('');
+}
+
+// === PRODUK: HAPUS ===
+async function hapusProduk(id) {
+    if (!confirm('Yakin ingin menghapus produk ini?')) return;
+    
+    const { error } = await sb
+        .from('products')
+        .delete()
+        .eq('id', id);
+    
+    if (error) { alert('Gagal menghapus: ' + error.message); return; }
+    alert('✅ Produk dihapus!');
+    muatProduk();
+}
+
+// Tampilkan daftar transaksi
+async function muatTransaksi() {
+    const listEl = document.getElementById('transaksi-list');
+    
+    const { data: transaksi, error } = await sb
+        .from('transaksi')
+        .select('*')
+        .order('tahun', { ascending: false })
+        .order('bulan', { ascending: false })
+        .order('tanggal', { ascending: false })
+        .order('jam', { ascending: false });
+    
+    if (error) {
+        listEl.innerHTML = `<div class="empty-state"><p>Error memuat transaksi</p></div>`;
+        return;
+    }
+    
+    if (!transaksi || transaksi.length === 0) {
+        listEl.innerHTML = `<div class="empty-state"><p>Belum ada transaksi masuk</p></div>`;
+        return;
+    }
+    
+    listEl.innerHTML = '';
+    
+    transaksi.forEach(item => {
+        listEl.innerHTML += `
+        <div class="transaksi-item">
+            <div class="transaksi-label">Nama User:</div>
+            <div class="transaksi-value">${item.username || '-'}</div>
+            
+            <div class="transaksi-label">Yang Dibeli:</div>
+          <div class="transaksi-value">
+    ${item.produk || '-'}
+    ${item.kualitas ? `<br><small style="color:#6b7280">Jumlah: ${item.kualitas}</small>` : ''}
+</div>
+            
+            <div class="transaksi-label">Harga:</div>
+            <div class="transaksi-value">Rp${item.harga ? item.harga.toLocaleString('id-ID') : '0'}</div>
+            
+            <div class="transaksi-label">Foto Bukti TF:</div>
+            <div>
+                ${item.bukti_url 
+                    ? `<img src="${item.bukti_url}" class="transaksi-bukti-img" onclick="openImgModal('${item.bukti_url}')" alt="Bukti Transfer">`
+                    : '<span style="color:#94a3b8">Tidak ada bukti</span>'
+                }
+            </div>
+            
+            ${localStorage.getItem('adminLoggedIn') === 'true' ? `
+<div style="margin-top: 12px; padding-top: 10px; border-top: 1px solid #e5e7eb;">
+    <button onclick="hapusTransaksi(${item.id})" style="
+        background: #ef4444;
+        color: white;
+        border: none;
+        padding: 7px 16px;
+        border-radius: 6px;
+        cursor: pointer;
+        font-size: 14px;
+    ">
+        🗑️ Hapus Transaksi
+    </button>
+</div>
+` : ''}
+
+            
+            <div class="transaksi-waktu">
+                📅 ${item.tanggal || '-'}/${item.bulan || '-'}/${item.tahun || '-'} • 🕐 ${item.jam || '-'}
+            </div>
+        </div>
+        `;
+    });
+}
+
+//fungsi hapus transaksi
+async function hapusTransaksi(id) {
+    if (localStorage.getItem('adminLoggedIn') !== 'true') {
+        alert('❌ Hanya admin yang dapat menghapus transaksi!');
+        return;
+    }
+
+    if (!confirm('⚠️ Yakin ingin menghapus transaksi ini? Tindakan tidak dapat dibatalkan!')) {
+        return;
+    }
+
+    const { error } = await sb
+        .from('transaksi')
+        .delete()
+        .eq('id', id);
+
+    if (error) {
+        alert('❌ Gagal menghapus: ' + error.message);
+        return;
+    }
+
+    alert('✅ Transaksi berhasil dihapus!');
+    muatTransaksi();
+}
+
+
+// Buka foto full
+function openImgModal(url) {
+    document.getElementById('img-modal-src').src = url;
+    document.getElementById('img-modal').classList.add('show');
+}
+
+function closeImgModal() {
+    document.getElementById('img-modal').classList.remove('show');
+}
+
+// Pindah tab ke Transaksi User
+document.querySelectorAll('[data-tab]').forEach(btn => {
+    btn.addEventListener('click', function() {
+        const tab = this.getAttribute('data-tab');
+        if (tab === 'transaksi') {
+            loadTransaksi();
+        }
+    });
+});
+
+
+// === CEK LOGIN SAAT BUKA HALAMAN ===
+window.onload = function() {
+    if (localStorage.getItem('adminLoggedIn') === 'true') {
+        document.getElementById('auth-section').classList.add('hidden');
+        document.getElementById('admin-panel').classList.remove('hidden');
+        muatProduk();
+        muatTransaksi();
+    }
+};
+</script>
+</body>
+</html>
